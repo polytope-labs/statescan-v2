@@ -1,0 +1,222 @@
+# Statescan for Nexus and Gargantua, built from an unmodified statescan-v2 checkout.
+# Run from the checkout root's deploy directory: docker compose up -d --build
+# Every port is bound to 127.0.0.1; browse through an SSH tunnel.
+x-backend: &backend
+  build:
+    context: ..
+    dockerfile: deploy/backend.Dockerfile
+  image: statescan-backend:local
+  restart: unless-stopped
+  depends_on: [mongo]
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo:/data/db
+
+  nexus-block-scan:
+    <<: *backend
+    command: node packages/block-scan/src/index.js
+    environment:
+      CHAIN: nexus
+      WS_ENDPOINT: wss://nexus.rpc.polytope.technology
+      SCAN_STEP: 100
+      LOG_LEVEL: info
+      SIMPLE_MODE: 1
+      MONGO_BLOCK_SCAN_URL: mongodb://mongo:27017
+      MONGO_BLOCK_SCAN_NAME: statescan-nexus-block
+
+  nexus-account-scan:
+    <<: *backend
+    command: node packages/account-scan/src/index.js
+    environment:
+      CHAIN: nexus
+      WS_ENDPOINT: wss://nexus.rpc.polytope.technology
+      SCAN_STEP: 100
+      LOG_LEVEL: info
+      MONGO_ACCOUNT_SCAN_URL: mongodb://mongo:27017
+      MONGO_ACCOUNT_SCAN_NAME: statescan-nexus-account
+
+  nexus-runtime-scan:
+    <<: *backend
+    command: node packages/runtime-scan/src/index.js
+    environment:
+      CHAIN: nexus
+      WS_ENDPOINT: wss://nexus.rpc.polytope.technology
+      SCAN_STEP: 100
+      LOG_LEVEL: info
+      MONGO_RUNTIME_SCAN_URL: mongodb://mongo:27017
+      MONGO_RUNTIME_SCAN_NAME: statescan-nexus-runtime
+
+  nexus-asset-scan:
+    <<: *backend
+    command: node packages/asset-scan/src/index.js
+    environment:
+      CHAIN: nexus
+      WS_ENDPOINT: wss://nexus.rpc.polytope.technology
+      SCAN_STEP: 100
+      LOG_LEVEL: info
+      MONGO_ASSET_SCAN_URL: mongodb://mongo:27017
+      MONGO_ASSET_SCAN_NAME: statescan-nexus-asset
+      MONGO_BLOCK_SCAN_URL: mongodb://mongo:27017
+      MONGO_BLOCK_SCAN_NAME: statescan-nexus-block
+
+  nexus-multisig-scan:
+    <<: *backend
+    command: node packages/multisig-scan/src/index.js
+    environment:
+      CHAIN: nexus
+      WS_ENDPOINT: wss://nexus.rpc.polytope.technology
+      SCAN_STEP: 100
+      LOG_LEVEL: info
+      MONGO_MULTISIG_SCAN_URL: mongodb://mongo:27017
+      MONGO_MULTISIG_SCAN_NAME: statescan-nexus-multisig
+
+  nexus-server:
+    <<: *backend
+    command: node packages/server/src/index.js
+    environment:
+      CHAIN: nexus
+      PORT: 5010
+      SIMPLE_MODE: 1
+      MONGO_BLOCK_SCAN_URL: mongodb://mongo:27017
+      MONGO_BLOCK_SCAN_NAME: statescan-nexus-block
+      MONGO_ACCOUNT_SCAN_URL: mongodb://mongo:27017
+      MONGO_ACCOUNT_SCAN_NAME: statescan-nexus-account
+      MONGO_RUNTIME_SCAN_URL: mongodb://mongo:27017
+      MONGO_RUNTIME_SCAN_NAME: statescan-nexus-runtime
+      MONGO_ASSET_SCAN_URL: mongodb://mongo:27017
+      MONGO_ASSET_SCAN_NAME: statescan-nexus-asset
+    ports:
+      - 127.0.0.1:7011:5010
+
+  nexus-graphql:
+    <<: *backend
+    command: node packages/graphql-server/src/index.js
+    environment:
+      CHAIN: nexus
+      PORT: 7100
+      WS_ENDPOINTS: wss://nexus.rpc.polytope.technology
+      MONGO_MULTISIG_SCAN_URL: mongodb://mongo:27017
+      MONGO_MULTISIG_SCAN_NAME: statescan-nexus-multisig
+    ports:
+      - 127.0.0.1:7012:7100
+
+  nexus-site:
+    build:
+      context: ..
+      dockerfile: deploy/site.Dockerfile
+      args:
+        CHAIN: nexus
+        API_END_POINT: http://localhost:7011/
+        GRAPHQL_API_END_POINT: http://localhost:7012/
+    image: statescan-site-nexus:local
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:7010:80
+
+  gargantua-block-scan:
+    <<: *backend
+    command: node packages/block-scan/src/index.js
+    environment:
+      CHAIN: gargantua
+      WS_ENDPOINT: wss://gargantua.rpc.polytope.technology
+      SCAN_STEP: 100
+      LOG_LEVEL: info
+      SIMPLE_MODE: 1
+      MONGO_BLOCK_SCAN_URL: mongodb://mongo:27017
+      MONGO_BLOCK_SCAN_NAME: statescan-gargantua-block
+
+  gargantua-account-scan:
+    <<: *backend
+    command: node packages/account-scan/src/index.js
+    environment:
+      CHAIN: gargantua
+      WS_ENDPOINT: wss://gargantua.rpc.polytope.technology
+      SCAN_STEP: 100
+      LOG_LEVEL: info
+      MONGO_ACCOUNT_SCAN_URL: mongodb://mongo:27017
+      MONGO_ACCOUNT_SCAN_NAME: statescan-gargantua-account
+
+  gargantua-runtime-scan:
+    <<: *backend
+    command: node packages/runtime-scan/src/index.js
+    environment:
+      CHAIN: gargantua
+      WS_ENDPOINT: wss://gargantua.rpc.polytope.technology
+      SCAN_STEP: 100
+      LOG_LEVEL: info
+      MONGO_RUNTIME_SCAN_URL: mongodb://mongo:27017
+      MONGO_RUNTIME_SCAN_NAME: statescan-gargantua-runtime
+
+  gargantua-asset-scan:
+    <<: *backend
+    command: node packages/asset-scan/src/index.js
+    environment:
+      CHAIN: gargantua
+      WS_ENDPOINT: wss://gargantua.rpc.polytope.technology
+      SCAN_STEP: 100
+      LOG_LEVEL: info
+      MONGO_ASSET_SCAN_URL: mongodb://mongo:27017
+      MONGO_ASSET_SCAN_NAME: statescan-gargantua-asset
+      MONGO_BLOCK_SCAN_URL: mongodb://mongo:27017
+      MONGO_BLOCK_SCAN_NAME: statescan-gargantua-block
+
+  gargantua-multisig-scan:
+    <<: *backend
+    command: node packages/multisig-scan/src/index.js
+    environment:
+      CHAIN: gargantua
+      WS_ENDPOINT: wss://gargantua.rpc.polytope.technology
+      SCAN_STEP: 100
+      LOG_LEVEL: info
+      MONGO_MULTISIG_SCAN_URL: mongodb://mongo:27017
+      MONGO_MULTISIG_SCAN_NAME: statescan-gargantua-multisig
+
+  gargantua-server:
+    <<: *backend
+    command: node packages/server/src/index.js
+    environment:
+      CHAIN: gargantua
+      PORT: 5010
+      SIMPLE_MODE: 1
+      MONGO_BLOCK_SCAN_URL: mongodb://mongo:27017
+      MONGO_BLOCK_SCAN_NAME: statescan-gargantua-block
+      MONGO_ACCOUNT_SCAN_URL: mongodb://mongo:27017
+      MONGO_ACCOUNT_SCAN_NAME: statescan-gargantua-account
+      MONGO_RUNTIME_SCAN_URL: mongodb://mongo:27017
+      MONGO_RUNTIME_SCAN_NAME: statescan-gargantua-runtime
+      MONGO_ASSET_SCAN_URL: mongodb://mongo:27017
+      MONGO_ASSET_SCAN_NAME: statescan-gargantua-asset
+    ports:
+      - 127.0.0.1:7021:5010
+
+  gargantua-graphql:
+    <<: *backend
+    command: node packages/graphql-server/src/index.js
+    environment:
+      CHAIN: gargantua
+      PORT: 7100
+      WS_ENDPOINTS: wss://gargantua.rpc.polytope.technology
+      MONGO_MULTISIG_SCAN_URL: mongodb://mongo:27017
+      MONGO_MULTISIG_SCAN_NAME: statescan-gargantua-multisig
+    ports:
+      - 127.0.0.1:7022:7100
+
+  gargantua-site:
+    build:
+      context: ..
+      dockerfile: deploy/site.Dockerfile
+      args:
+        CHAIN: gargantua
+        API_END_POINT: http://localhost:7021/
+        GRAPHQL_API_END_POINT: http://localhost:7022/
+    image: statescan-site-gargantua:local
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:7020:80
+
+volumes:
+  mongo:
